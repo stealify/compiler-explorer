@@ -1,16 +1,17 @@
-const { Worker } = require('worker_threads');
+// Workers get registered via blob url and exported as module 
+// Listen for messages from the main thread
+const runWorker = (fn=()=>{}) =>
+new Worker(URL.createObjectURL(
+new Blob([`(${fn})();`], 
+{ type: "text/javascript" })),{ type: "module" });
 
-function performTask() {
-  // Do some CPU-intensive task here
+const expensivTask = ()=>{
+  globalThis.on('message', (ev) => {
+    const {id} = ev.data;
+    console.log(`Received message id: {id} from main thread: ${ev.data}`);
+    // Do some CPU-intensive task here
+    globalThis.postMessage({ id, 'Hello from the worker thread!' });
+  });
 }
 
-// Create a new worker thread
-const worker = new Worker(performTask);
-
-// Listen for messages from the main thread
-worker.on('message', (message) => {
-  console.log(`Received message from main thread: ${message}`);
-});
-
-// Send a message back to the main thread
-worker.postMessage('Hello from the worker thread!');
+runWorker(expensivTask);
